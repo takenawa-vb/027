@@ -1,0 +1,95 @@
+version: "3.9"
+volumes:
+  psysh-store:
+  mysql_data:
+
+services:
+  app:
+    build:
+      context: ./
+      dockerfile: ./docker/php/Dockerfile
+      target: ${APP_BUILD_TARGET:-development}
+    volumes:
+      - type: bind
+        source: ./
+        target: /var/www/html
+      - type: volume
+        source: psysh-store
+        target: /root/.config/psysh
+        volume:
+          nocopy: true
+    # environment:
+    #   - APP_DEBUG=${APP_DEBUG:-true}
+    #   - APP_ENV=${APP_ENV:-local}
+    #   - APP_URL=${APP_URL:-http://localhost}
+    #   - LOG_CHANNEL=${LOG_CHANNEL:-stderr}
+    #   - LOG_STDERR_FORMATTER=${LOG_STDERR_FORMATTER:-Monolog\Formatter\JsonFormatter}
+    #   - DB_CONNECTION=${DB_CONNECTION:-mysql}
+    #   - DB_HOST=${DB_HOST:-db}
+    #   - DB_PORT=${DB_PORT:-3306}
+    #   - DB_DATABASE=${DB_DATABASE:-laravel}
+    #   - DB_USERNAME=${DB_USERNAME:-phper}
+    #   - DB_PASSWORD=${DB_PASSWORD:-secret}
+    # restart: always
+
+  web:
+    build:
+      context: ./
+      dockerfile: ./docker/nginx/Dockerfile
+    ports:
+      - target: 80
+        published: ${WEB_PUBLISHED_PORT:-80}
+        protocol: tcp
+        mode: host
+    volumes:
+      - type: bind
+        source: ./
+        target: /var/www/html
+    # restart: always
+
+  db:
+    # platform: linux/amd64
+    build:
+      context: ./
+      dockerfile: ./docker/mysql/Dockerfile
+    ports:
+      - target: 3306
+        published: ${DB_PUBLISHED_PORT:-3306}
+        protocol: tcp
+        mode: host
+    volumes:
+      - type: volume
+        source: mysql_data
+        target: /var/lib/mysql
+        volume:
+          nocopy: true
+    environment:
+      - MYSQL_DATABASE=${DB_DATABASE}
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_HOST=%
+    # restart: always
+
+  # phpmyadmin:
+  #     image: phpmyadmin/phpmyadmin
+  #     environment:
+  #       - PMA_ARBITRARY=1
+  #       - PMA_HOST=db
+  #       - PMA_USER=root
+  #       - PMA_PASSWORD=${DB_PASSWORD}
+  #     # links:
+  #     #   - mysql
+  #     ports:
+  #       - 8080:80
+  #     volumes:
+  #       - /sessions
+  #     platform: linux/amd64
+
+  # mailhog:
+  #   # platform: linux/x86_64
+  #   platform: linux/amd64
+  #   image: mailhog/mailhog
+  #   ports:
+  #     - target: 8025
+  #       published: ${MAILHOG_PUBLISHED_PORT:-8025}
+  #       protocol: tcp
+  #       mode: host
